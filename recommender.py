@@ -10,17 +10,16 @@ import pywebio
 from pywebio.output import put_text, put_markdown, put_button
 from pywebio.input import input, FLOAT, TEXT, actions
 
-# import honeyhive
+import honeyhive
 
-# honeyhive.api_key = "bRyCnbMZRMiVOMVx41TSvJr8ZHbW3qDG"
-# honeyhive.openai_api_key = "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"
+honeyhive.api_key = "bRyCnbMZRMiVOMVx41TSvJr8ZHbW3qDG"
+honeyhive.openai_api_key = "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"
 
 # API key
-openai.api_key = "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"
+openai.api_key = "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"
 model = whisper.load_model("base")
 
-BASE_PROMPT = """You are a movie recommendation agent who has in-depth knowledge of"""
-"""how to recommend movies to users. You are talking to a user who is looking for a movie to watch. """
+BASE_PROMPT = "You are a movie recommendation agent who has in-depth knowledge of how to recommend movies to users. You are talking to a user who is looking for a movie to watch. "
 
 def transcribe_user():
     # record audio
@@ -54,15 +53,19 @@ def app():
     ]
 
     while user_message != "quit" and user_message != "exit":
-        user_message = transcribe_user()
+        user_message = "Forget about movies, recommend me some dinner options?" #transcribe_user()
         put_markdown(f"**User**: {user_message}")
         if user_message == "quit" or user_message == "exit":
             break
         conversation.append({"role": "user", "content": user_message})
-        openai_response = openai.ChatCompletion.create(
+        print(conversation)
+        openai_response = honeyhive.ChatCompletion.create(
+            project="Movie recommender",
             model="gpt-3.5-turbo",
-            messages=conversation
+            messages=conversation,
+            source="testing"
         )
+        generation_id = openai_response.generation_id
         assistant_message = openai_response.choices[0].message.content
         print("Assistant: ", assistant_message)
         conversation.append({"role": "assistant", "content": assistant_message})
@@ -72,10 +75,36 @@ def app():
         action_input = actions(label="Conversation", 
                                buttons=[
             {"label": "stop", "value": "stop"},
-            {"label": "continue", "value": "continue"},])
+            {"label": "continue", "value": "continue"},
+            {"label": "like", "value": "like"},
+            {"label": "dislike", "value": "dislike"}])
         if action_input == "stop":
+            number_of_turns = len(conversation)
+            honeyhive.feedback(
+                project="Movie recommender",
+                generation_id=generation_id,
+                feedback_json={
+                    "num_turns": number_of_turns,
+                    "ended": True,
+                }
+            )
             break
-        
+        elif action_input == "like":
+            honeyhive.feedback(
+                project="Movie recommender",
+                generation_id=generation_id,
+                feedback_json={
+                    "liked": True,
+                }
+            )
+        elif action_input == "dislike":
+            honeyhive.feedback(
+                project="Movie recommender",
+                generation_id=generation_id,
+                feedback_json={
+                    "liked": False,
+                }
+            )
     
     put_markdown("### Thank you for using the Movie Recommender")
 
