@@ -1,0 +1,6 @@
+openai
+whisper
+soundfile
+sounddevice
+pywebio
+honeyhive
